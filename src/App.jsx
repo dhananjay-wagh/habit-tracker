@@ -34,13 +34,13 @@ function getTotalCompletions(completions = {}) {
 const EMOJIS = ["⚡","🏃","📚","💧","🧘","🎯","💪","🥗","😴","🖥️","✍️","🎸","🧠","🌿","☕"];
 const BLUE = "#2563eb";
 const BLUE_LIGHT = "#eff6ff";
-// ← PASTE CustomTick HERE, outside the component
-const CustomTick = ({ x, y, payload }) => (
-  <text x={x - 4} y={y} dy={4} textAnchor="end" fontSize={10} fill="#334155" dominantBaseline="middle">
+
+// Custom tick so emojis render properly in recharts YAxis
+const CustomYTick = ({ x, y, payload }) => (
+  <text x={x - 8} y={y} dy={4} textAnchor="end" fontSize={11} fill="#334155" dominantBaseline="middle">
     {payload.value}
   </text>
 );
-
 
 export default function HabitTracker() {
   const [habits, setHabits] = useState([]);
@@ -53,21 +53,22 @@ export default function HabitTracker() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const h = localStorage.getItem("habits_v2");
-    if (h) setHabits(JSON.parse(h));
-    const g = localStorage.getItem("goals_v2");
-    if (g) setGoals(JSON.parse(g));
-    setLoaded(true);
+    async function load() {
+      try { const h = await window.storage.get("habits_v2"); if (h) setHabits(JSON.parse(h.value)); } catch {}
+      try { const g = await window.storage.get("goals_v2"); if (g) setGoals(JSON.parse(g.value)); } catch {}
+      setLoaded(true);
+    }
+    load();
   }, []);
 
-  const saveHabits = useCallback((data) => {
+  const saveHabits = useCallback(async (data) => {
     setHabits(data);
-    localStorage.setItem("habits_v2", JSON.stringify(data));
+    await window.storage.set("habits_v2", JSON.stringify(data));
   }, []);
 
-  const saveGoals = useCallback((data) => {
+  const saveGoals = useCallback(async (data) => {
     setGoals(data);
-    localStorage.setItem("goals_v2", JSON.stringify(data));
+    await window.storage.set("goals_v2", JSON.stringify(data));
   }, []);
 
   const toggleHabit = (id) => {
@@ -118,7 +119,8 @@ export default function HabitTracker() {
 
   const goalsRadial = goals.slice(0, 5).map((g, i) => ({
     name: g.name,
-    value: Math.round((g.current / g.target) * 100),
+    value: Math.min(Math.round((g.current / g.target) * 100), 100),
+    maxValue: 100,
     fill: ["#2563eb","#7c3aed","#0891b2","#059669","#d97706"][i % 5],
   }));
 
@@ -487,11 +489,11 @@ export default function HabitTracker() {
                     ) : (
                       <ResponsiveContainer width="100%" height={200}>
                         <BarChart layout="vertical"
-                          data={habits.slice(0, 7).map(h => ({ name: `${h.emoji} ${h.name.slice(0, 11)}`, total: getTotalCompletions(h.completions) }))}
-                          margin={{ top: 4, right: 20, left: 0, bottom: 0 }} barSize={14}>
+                          data={habits.slice(0, 7).map(h => ({ name: `${h.emoji} ${h.name.slice(0, 14)}`, total: getTotalCompletions(h.completions) }))}
+                          margin={{ top: 4, right: 20, left: 10, bottom: 0 }} barSize={14}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                          <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }}  axisLine={false} tickLine={false} allowDecimals={false} tickCount={5}/>
-                          <YAxis type="category" dataKey="name"  tick={<CustomTick />} axisLine={false} tickLine={false} width={140} />
+                          <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                          <YAxis type="category" dataKey="name" tick={<CustomYTick />} axisLine={false} tickLine={false} width={130} />
                           <Tooltip formatter={v => [v, "Check-ins"]} contentStyle={{ background: "#1e293b", border: "none", borderRadius: 8, color: "#fff", fontSize: "0.8rem" }} />
                           <Bar dataKey="total" radius={[0, 6, 6, 0]}>
                             {habits.slice(0, 7).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -502,29 +504,55 @@ export default function HabitTracker() {
                   </div>
                 </div>
 
-                {/* Goals radial + bars */}
+                {/* Goals SVG donut + bars */}
                 {goals.length > 0 && (
                   <div className="card shadow" style={{ padding: "22px 24px", marginBottom: 16 }}>
                     <div className="slabel">Goals Progress</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
-                      <ResponsiveContainer width={200} height={200}>
-                        <RadialBarChart cx="50%" cy="50%" innerRadius="28%" outerRadius="88%" data={goalsRadial} startAngle={90} endAngle={-270}>
-                          <RadialBar dataKey="value" cornerRadius={5} background={{ fill: "#f1f5f9" }} />
-                          <Tooltip formatter={v => [`${v}%`, "Progress"]} contentStyle={{ background: "#1e293b", border: "none", borderRadius: 8, color: "#fff", fontSize: "0.8rem" }} />
-                        </RadialBarChart>
-                      </ResponsiveContainer>
-                      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+                      {/* Accurate SVG donut rings — one ring per goal */}
+                      <svg width="200" height="200" viewBox="0 0 200 200" style={{ flexShrink: 0 }}>
+                        {goals.slice(0, 5).map((g, i) => {
+                          const pct = Math.min((g.current / g.target) * 100, 100);
+                          const c = COLORS[i % COLORS.length];
+                          const total = 5;
+                          const gap = 10;
+                          const maxR = 88;
+                          const ringW = (maxR - gap * (total - 1)) / total;
+                          const r = maxR - i * (ringW + gap) - ringW / 2;
+                          const circ = 2 * Math.PI * r;
+                          const dash = (pct / 100) * circ;
+                          return (
+                            <g key={g.id}>
+                              {/* track */}
+                              <circle cx="100" cy="100" r={r} fill="none" stroke="#f1f5f9" strokeWidth={ringW} />
+                              {/* fill */}
+                              <circle
+                                cx="100" cy="100" r={r}
+                                fill="none" stroke={c} strokeWidth={ringW}
+                                strokeDasharray={`${dash} ${circ - dash}`}
+                                strokeLinecap="round"
+                                transform="rotate(-90 100 100)"
+                                style={{ transition: "stroke-dasharray 0.5s ease" }}
+                              />
+                            </g>
+                          );
+                        })}
+                      </svg>
+                      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
                         {goals.map((g, i) => {
                           const pct = Math.min((g.current / g.target) * 100, 100);
                           const c = COLORS[i % COLORS.length];
                           return (
                             <div key={g.id}>
-                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                                <span style={{ fontSize: "0.84rem", fontWeight: 500, color: "#334155" }}>{g.name}</span>
+                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, alignItems: "center" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: c, flexShrink: 0 }} />
+                                  <span style={{ fontSize: "0.84rem", fontWeight: 500, color: "#334155" }}>{g.name}</span>
+                                </div>
                                 <span style={{ fontSize: "0.8rem", fontWeight: 700, color: c }}>{Math.round(pct)}%</span>
                               </div>
-                              <div style={{ height: 6, background: "#f1f5f9", borderRadius: 3, overflow: "hidden" }}>
-                                <div style={{ height: "100%", width: `${pct}%`, background: c, borderRadius: 3, transition: "width 0.4s" }} />
+                              <div style={{ height: 4, background: "#f1f5f9", borderRadius: 3, overflow: "hidden" }}>
+                                <div style={{ height: "100%", width: `${pct}%`, minWidth: pct > 0 ? 4 : 0, background: c, borderRadius: 3, transition: "width 0.5s ease" }} />
                               </div>
                             </div>
                           );
