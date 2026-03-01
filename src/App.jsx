@@ -34,6 +34,13 @@ function getTotalCompletions(completions = {}) {
 const EMOJIS = ["⚡","🏃","📚","💧","🧘","🎯","💪","🥗","😴","🖥️","✍️","🎸","🧠","🌿","☕"];
 const BLUE = "#2563eb";
 const BLUE_LIGHT = "#eff6ff";
+// ← PASTE CustomTick HERE, outside the component
+const CustomTick = ({ x, y, payload }) => (
+  <text x={x - 4} y={y} dy={4} textAnchor="end" fontSize={10} fill="#334155" dominantBaseline="middle">
+    {payload.value}
+  </text>
+);
+
 
 export default function HabitTracker() {
   const [habits, setHabits] = useState([]);
@@ -484,7 +491,7 @@ export default function HabitTracker() {
                           margin={{ top: 4, right: 20, left: 0, bottom: 0 }} barSize={14}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                           <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }}  axisLine={false} tickLine={false} allowDecimals={false} tickCount={5}/>
-                          <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "#334155" }} axisLine={false} tickLine={false}   width={110}/>
+                          <YAxis type="category" dataKey="name"  tick={<CustomTick />} axisLine={false} tickLine={false} width={140} />
                           <Tooltip formatter={v => [v, "Check-ins"]} contentStyle={{ background: "#1e293b", border: "none", borderRadius: 8, color: "#fff", fontSize: "0.8rem" }} />
                           <Bar dataKey="total" radius={[0, 6, 6, 0]}>
                             {habits.slice(0, 7).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
