@@ -483,8 +483,8 @@ export default function HabitTracker() {
                           data={habits.slice(0, 7).map(h => ({ name: `${h.emoji} ${h.name.slice(0, 11)}`, total: getTotalCompletions(h.completions) }))}
                           margin={{ top: 4, right: 20, left: 0, bottom: 0 }} barSize={14}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                          <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                          <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "#334155" }} axisLine={false} tickLine={false} width={92} />
+                          <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }}  axisLine={false} tickLine={false} allowDecimals={false} tickCount={5}/>
+                          <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "#334155" }} axisLine={false} tickLine={false}   width={110}/>
                           <Tooltip formatter={v => [v, "Check-ins"]} contentStyle={{ background: "#1e293b", border: "none", borderRadius: 8, color: "#fff", fontSize: "0.8rem" }} />
                           <Bar dataKey="total" radius={[0, 6, 6, 0]}>
                             {habits.slice(0, 7).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
