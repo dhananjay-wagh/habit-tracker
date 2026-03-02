@@ -18,7 +18,7 @@ A simple habit tracking web application that helps users build and maintain dail
 ## Installation
 
 1. Clone the repository
-git clone https://github.com/your-username/habit-tracker.git
+git clone https://github.com/dhananjay-wagh/habit-tracker.git
 
 2. Navigate to the project folder
 cd habit-tracker
