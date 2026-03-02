@@ -53,22 +53,21 @@ export default function HabitTracker() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    async function load() {
-      try { const h = await window.storage.get("habits_v2"); if (h) setHabits(JSON.parse(h.value)); } catch {}
-      try { const g = await window.storage.get("goals_v2"); if (g) setGoals(JSON.parse(g.value)); } catch {}
-      setLoaded(true);
-    }
-    load();
+    const h = localStorage.getItem("habits_v2");
+    if (h) setHabits(JSON.parse(h));
+    const g = localStorage.getItem("goals_v2");
+    if (g) setGoals(JSON.parse(g));
+    setLoaded(true);
   }, []);
 
-  const saveHabits = useCallback(async (data) => {
+  const saveHabits = useCallback((data) => {
     setHabits(data);
-    await window.storage.set("habits_v2", JSON.stringify(data));
+    localStorage.setItem("habits_v2", JSON.stringify(data));
   }, []);
 
-  const saveGoals = useCallback(async (data) => {
+  const saveGoals = useCallback((data) => {
     setGoals(data);
-    await window.storage.set("goals_v2", JSON.stringify(data));
+    localStorage.setItem("goals_v2", JSON.stringify(data));
   }, []);
 
   const toggleHabit = (id) => {
